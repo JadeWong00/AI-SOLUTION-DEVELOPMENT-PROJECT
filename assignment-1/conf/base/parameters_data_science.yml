@@ -1,0 +1,66 @@
+one_hot_encoded_columns:
+  test_size: 0.2
+  random_state: 42
+  features:
+    - Age
+    - Campaign Calls
+    - Previous Contact Days
+    - Occupation_blue-collar
+    - Occupation_entrepreneur
+    - Occupation_housemaid
+    - Occupation_management
+    - Occupation_retired
+    - Occupation_self-employed
+    - Occupation_services
+    - Occupation_student
+    - Occupation_technician
+    - Occupation_unemployed
+    - Occupation_unknown
+    - Marital Status_married
+    - Marital Status_single
+    - Marital Status_unknown
+    - Education Level_basic.6y
+    - Education Level_basic.9y
+    - Education Level_high.school
+    - Education Level_illiterate
+    - Education Level_professional.course
+    - Education Level_university.degree
+    - Education Level_unknown
+    - Credit Default_unknown
+    - Credit Default_yes
+    - Housing Loan_unknown
+    - Housing Loan_yes
+    - Personal Loan_unknown
+    - Personal Loan_yes
+    - Contact Method_telephone
+
+label_encoded_dataset_columns:
+  test_size: 0.2
+  random_state: 3
+  features:
+    - Age
+    - Occupation
+    - Marital Status
+    - Education Level
+    - Credit Default
+    - Housing Loan
+    - Personal Loan
+    - Contact Method
+    - Campaign Calls
+    - Previous Contact Days
+
+random_forest_model_parameters:
+  n_estimators: 545 
+  random_state: 42
+  max_depth: 5
+  n_jobs: -1
+  class_weight: 'balanced'
+  max_features: 'log2'
+  min_samples_split: 9
+  min_samples_leaf: 1
+
+number_cols:
+  features:
+    - Age
+    - Campaign Calls
+    - Previous Contact Days
