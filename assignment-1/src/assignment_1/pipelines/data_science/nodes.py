@@ -4,7 +4,13 @@ from sklearn.metrics import max_error, mean_absolute_error, r2_score, accuracy_s
 from sklearn.model_selection import train_test_split, GridSearchCV, RandomizedSearchCV
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.pipeline import Pipeline
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
 from scipy.stats import randint
+from xgboost import XGBClassifier
+from catboost import CatBoostClassifier
+import numpy as np
 
 def split_data(data: pd.DataFrame, parameters: dict) -> tuple:
     """Splits data into features and targets training and test sets.
@@ -117,6 +123,26 @@ def grid_search_knn(X_train: pd.DataFrame, y_train: pd.Series) -> KNeighborsClas
     logger.info("Best KNN parameters found: %s", grid.best_params_)
     return best_knn
 
+def train_knn_model(X_train: pd.DataFrame, y_train: pd.Series) -> KNeighborsClassifier:
+    
+    pipe = Pipeline([
+        ("scaler", StandardScaler()),
+        ("pca", PCA()),
+        ("knn", KNeighborsClassifier())
+    ])
+
+    param = {
+        "pca__n_components": 24,
+        "knn__n_neighbors": 32,
+        "knn__weights": "distance",
+        "knn__p": 2,
+    }
+
+    knn = pipe.set_params(**param)
+    knn.fit(X_train, y_train)
+
+    return knn
+
 def evaluate_knn_model(
     knn: KNeighborsClassifier, X_test: pd.DataFrame, y_test: pd.Series
 ) -> dict[str, float]:
@@ -157,24 +183,68 @@ def evaluate_random_forest_model(
     return {"accuracy": accuracy, "f1_score": f1, "confusion_matrix": cm.tolist()}
 
 def random_search_knn(X_train, y_train):
-    knn = KNeighborsClassifier()
+
+    pipe = Pipeline([
+        ("scaler", StandardScaler()),
+        ("pca", PCA()),
+        ("knn", KNeighborsClassifier())
+    ])
 
     param_dist = {
-        "n_neighbors": randint(50, 150),
-        "weights": ["uniform", "distance"],
-        "metric": ["euclidean", "manhattan", "minkowski"]
+        "pca__n_components": randint(5, 40),
+        "knn__n_neighbors": randint(5, 150),
+        "knn__weights": ["uniform", "distance"],
+        "knn__p": [1, 2],
     }
 
-    f2_score = make_scorer(fbeta_score, beta=2)
+    f2 = make_scorer(fbeta_score, beta=2)
 
     search = RandomizedSearchCV(
-        estimator=knn,
-        param_distributions=param_dist,
+        pipe,
+        param_dist,
         n_iter=50,
-        scoring=f2_score,
+        scoring=f2,
+        cv=5,
+        n_jobs=-1,
+        verbose=1,
+        random_state=42
+    )
+
+    logger = logging.getLogger(__name__)
+
+    search.fit(X_train, y_train)
+
+    logger.info(f"Best KNN Params: {search.best_params_}")
+    logger.info(f"Best CV F2 Score: {search.best_score_}")
+
+    return search.best_estimator_
+
+
+def random_search_xgboost(X_train, y_train):
+
+    xgb = XGBClassifier(use_label_encoder=False, eval_metric='logloss', scale_pos_weight=8 , random_state=42)
+
+    param_dist = {
+        "n_estimators": randint(300, 1500),
+        "max_depth": randint(3, 15),
+        "learning_rate": [0.01, 0.05, 0.1, 0.2, 0.3],
+        "subsample": [0.6, 0.8, 1.0],
+        "colsample_bytree": [0.6, 0.8, 1.0],
+        "gamma": [0, 0.1, 0.2, 0.3],
+        "reg_alpha": [0, 0.01, 0.1, 1],
+        "reg_lambda": [1, 1.5, 2]
+    }
+
+    f2 = make_scorer(fbeta_score, beta=2)
+
+    search = RandomizedSearchCV(
+        xgb,
+        param_dist,
+        n_iter=80,
+        scoring=f2,
         cv=5,
         verbose=1,
-        n_jobs=1,
+        n_jobs=-1,
         random_state=42
     )
 
@@ -183,9 +253,132 @@ def random_search_knn(X_train, y_train):
     logger = logging.getLogger(__name__)
 
     # Log best parameters + score
-    logger.info(f"Best KNN Params: {search.best_params_}")
+    logger.info(f"Best XGBoost Params: {search.best_params_}")
     logger.info(f"Best CV F2 Score: {search.best_score_}")
 
     return search.best_estimator_
 
+def train_xgboost_model(X_train: pd.DataFrame, y_train: pd.Series, parameters: dict) -> XGBClassifier:
+    """Train XGBoost classifier."""
+    xgb = XGBClassifier(
+        n_estimators=parameters["n_estimators"],
+        max_depth=parameters["max_depth"],
+        learning_rate=parameters["learning_rate"],
+        subsample=parameters["subsample"],
+        colsample_bytree=parameters["colsample_bytree"],
+        gamma=parameters["gamma"],
+        reg_alpha=parameters["reg_alpha"],
+        reg_lambda=parameters["reg_lambda"],
+        use_label_encoder=False,
+        eval_metric='logloss',
+        scale_pos_weight=parameters["scale_pos_weight"],
+        random_state=parameters["random_state"]
+    )
+    xgb.fit(X_train, y_train)
+    return xgb
 
+def evaluate_xgboost_model(
+    xgb: XGBClassifier, X_test: pd.DataFrame, y_test: pd.Series
+) -> dict[str, float]:
+    """Evaluate XGBoost classifier."""
+    y_pred = xgb.predict(X_test)
+    
+    accuracy = accuracy_score(y_test, y_pred)
+    f1 = f1_score(y_test, y_pred)
+    cm = confusion_matrix(y_test, y_pred)
+    f2 = fbeta_score(y_test, y_pred, beta=2)
+    
+    
+    logger = logging.getLogger(__name__)
+    
+    logger.info("XGBoost Model Accuracy: %.3f", accuracy)
+    logger.info("XGBoost Model F1 Score: %.3f", f1)
+    logger.info("XGBoost Model F2 Score: %.4f", f2)
+    logger.info("XGBoost Confusion Matrix:\n%s", cm)
+    
+    return 
+
+def random_search_catboost(X_train, y_train):
+
+    catboost = CatBoostClassifier(
+                                    loss_function="Logloss",
+                                    eval_metric="F1",
+                                    verbose=0,
+                                    task_type="CPU",
+                                    random_seed=42,
+                                    class_weights=[1, 8]
+                                )
+
+    param_dist = {
+        "iterations": np.arange(300, 1500, 50),
+        "depth": np.arange(3, 10),
+        "learning_rate": np.linspace(0.01, 0.3, 10),
+        "l2_leaf_reg": np.linspace(1, 10, 10),
+        "bagging_temperature": np.linspace(0, 1, 10),
+        "random_strength": np.linspace(1, 20, 10),
+        "border_count": np.arange(32, 256, 32)
+    }
+
+    f2 = make_scorer(fbeta_score, beta=2)
+
+    search = RandomizedSearchCV(
+        catboost,
+        param_dist,
+        n_iter=80,
+        scoring=f2,
+        cv=5,
+        verbose=1,
+        n_jobs=-1,
+        random_state=42
+    )
+
+    search.fit(X_train, y_train)
+
+    logger = logging.getLogger(__name__)
+
+    # Log best parameters + score
+    logger.info(f"Best CatBoost Params: {search.best_params_}")
+    logger.info(f"Best CV F2 Score: {search.best_score_}")
+
+    return search.best_estimator_
+
+def train_catboost_model(X_train: pd.DataFrame, y_train: pd.Series, parameters: dict) -> CatBoostClassifier:
+    """Train CatBoost classifier."""
+    catboost = CatBoostClassifier(
+        iterations=parameters["iterations"],
+        depth=parameters["depth"],
+        learning_rate=parameters["learning_rate"],
+        l2_leaf_reg=parameters["l2_leaf_reg"],
+        bagging_temperature=parameters["bagging_temperature"],
+        random_strength=parameters["random_strength"],
+        border_count=parameters["border_count"],
+        loss_function="Logloss",
+        eval_metric="F1",
+        verbose=0,
+        task_type="CPU",
+        random_seed=parameters["random_seed"],
+        class_weights=parameters["class_weights"]
+    )
+    catboost.fit(X_train, y_train)
+    return catboost
+
+def evaluate_catboost_model(
+    catboost: CatBoostClassifier, X_test: pd.DataFrame, y_test: pd.Series
+) -> dict[str, float]:
+    """Evaluate CatBoost classifier."""
+    y_pred = catboost.predict(X_test)
+    
+    accuracy = accuracy_score(y_test, y_pred)
+    f1 = f1_score(y_test, y_pred)
+    cm = confusion_matrix(y_test, y_pred)
+    f2 = fbeta_score(y_test, y_pred, beta=2)
+    
+    
+    logger = logging.getLogger(__name__)
+    
+    logger.info("CatBoost Model Accuracy: %.3f", accuracy)
+    logger.info("CatBoost Model F1 Score: %.3f", f1)
+    logger.info("CatBoost Model F2 Score: %.4f", f2)
+    logger.info("CatBoost Confusion Matrix:\n%s", cm)
+    
+    return

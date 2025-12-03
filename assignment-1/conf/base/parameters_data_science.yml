@@ -64,3 +64,26 @@ number_cols:
     - Age
     - Campaign Calls
     - Previous Contact Days
+
+xgboost_model_parameters:
+  n_estimators: 427
+  learning_rate: 0.01
+  max_depth: 6
+  subsample: 0.8
+  colsample_bytree: 0.6
+  scale_pos_weight: 8
+  random_state: 42
+  gamma: 0.3
+  reg_lambda: 1
+  reg_alpha: 0.01
+
+catboost_model_parameters:
+  random_strength: 20
+  learning_rate: 0.01
+  l2_leaf_reg: 8
+  iterations: 1000
+  depth: 4
+  border_count: 160
+  bagging_temperature: 0.4444444444444444
+  random_seed: 42
+  class_weights: [1, 8]
