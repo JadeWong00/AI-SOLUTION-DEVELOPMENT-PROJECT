@@ -26,8 +26,8 @@ def data_processing_node(df: pd.DataFrame, number_cols: dict) -> pd.DataFrame:
 
     df_copy['Subscription Status'] = df_copy['Subscription Status'].replace({ "no" : 0, "yes": 1 })
 
-    df_norm_age = df_copy[df_copy['Age'] < 123]
-    df_copy["Age"].loc[df_copy["Age"] > 123] = df_norm_age["Age"].median()
+    median_age = df_copy.loc[df_copy["Age"] < 123, "Age"].median()
+    df_copy.loc[df_copy["Age"] > 123, "Age"] = median_age
 
     minMax_Scaler = MinMaxScaler()
     df_copy[number_cols['features']] = minMax_Scaler.fit_transform(df_copy[number_cols['features']])
