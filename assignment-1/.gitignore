@@ -1,10 +1,6 @@
 ##########################
 # KEDRO PROJECT
 
-# ignore all local configuration
-conf/local/**
-!conf/local/.gitkeep
-
 # ignore everything in the following folders
 data/**
 
