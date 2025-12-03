@@ -5,9 +5,6 @@
 conf/local/**
 !conf/local/.gitkeep
 
-# ignore potentially sensitive credentials files
-conf/**/*credentials*
-
 # ignore everything in the following folders
 data/**
 
@@ -21,6 +18,7 @@ data/**
 !data/01_raw/companies.csv
 !data/01_raw/reviews.csv
 !data/01_raw/shuttles.xlsx
+!data/09_bmarket_db/bmarket.db
 
 # ignore kedro-viz metadata
 .viz

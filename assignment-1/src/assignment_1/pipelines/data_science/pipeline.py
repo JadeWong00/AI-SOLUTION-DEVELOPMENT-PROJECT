@@ -1,7 +1,7 @@
 from kedro.pipeline import Node, Pipeline
 
 from .nodes import (evaluate_random_forest_model, split_data, train_random_forest_model,
-                    grid_search_random_forest, evaluate_knn_model, 
+                    grid_search_random_forest, evaluate_knn_model, new_model,
                     grid_search_knn ,random_search_random_forest, random_search_knn)
 
 
