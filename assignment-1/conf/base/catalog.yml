@@ -58,20 +58,20 @@ label_encoded_dataset:
 
 forest:
   type: pickle.PickleDataset
-  filepath: data/06_models/forest.pickle
+  filepath: ../saved_models/forest.pickle
   versioned: true
 
 knn_model:
   type: pickle.PickleDataset
-  filepath: data/06_models/knn_model.pickle
+  filepath: ../saved_models/knn_model.pickle
   versioned: true
 
 xgb_model:
   type: pickle.PickleDataset
-  filepath: data/06_models/xgb_model.pickle
+  filepath: ../saved_models/xgb_model.pickle
   versioned: true
 
 catboost_model:
   type: pickle.PickleDataset
-  filepath: data/06_models/catboost_model.pickle
+  filepath: ../saved_models/catboost_model.pickle
   versioned: true
