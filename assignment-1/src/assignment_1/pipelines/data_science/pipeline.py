@@ -42,7 +42,7 @@ def create_pipeline(**kwargs) -> Pipeline:
             ),
             Node(
                 func=train_catboost_model,
-                inputs=["X_train", "y_train"],
+                inputs=["X_train", "y_train", "params:catboost_model_parameters"],
                 outputs="catboost_model",
                 name="random_search_catboost_node",
             ),
