@@ -2,7 +2,8 @@ from kedro.pipeline import Node, Pipeline
 
 from .nodes import (evaluate_random_forest_model, split_data, train_random_forest_model, train_xgboost_model,
                     grid_search_random_forest, evaluate_knn_model, random_search_xgboost, train_knn_model,
-                    random_search_catboost, evaluate_catboost_model, train_catboost_model,
+                    random_search_catboost, evaluate_catboost_model, train_catboost_model, random_search_decision_tree,
+                    evaluate_tree_model, drop_cols_data, 
                     grid_search_knn ,random_search_random_forest, random_search_knn, evaluate_xgboost_model)
 
 
@@ -14,6 +15,12 @@ def create_pipeline(**kwargs) -> Pipeline:
                 inputs=["one_hot_encoded_data", "params:one_hot_encoded_columns"],
                 outputs=["X_train", "X_test", "y_train", "y_test"],
                 name="split_data_node",
+            ),
+            Node(
+                func=drop_cols_data,
+                inputs=["one_hot_encoded_data", "params:kept_columns"],
+                outputs=["X2_train", "X2_test", "y2_train", "y2_test"],
+                name="dropped_cols_data_node",
             ),
             Node(
                 func=train_random_forest_model,
@@ -35,7 +42,7 @@ def create_pipeline(**kwargs) -> Pipeline:
             ),
             Node(
                 func=train_catboost_model,
-                inputs=["X_train", "y_train", "params:catboost_model_parameters"],
+                inputs=["X_train", "y_train"],
                 outputs="catboost_model",
                 name="random_search_catboost_node",
             ),
@@ -62,6 +69,18 @@ def create_pipeline(**kwargs) -> Pipeline:
                 inputs=["catboost_model", "X_test", "y_test"],
                 outputs=None,
                 name="evaluate_catboost_model_node",
+            ),
+            Node(
+                func=random_search_decision_tree,
+                inputs=["X2_train", "y2_train"],
+                outputs="decision_tree_model",
+                name="random_search_decision_tree_node",
+            ),
+            Node(
+                func=evaluate_tree_model,
+                inputs=["decision_tree_model","X2_test", "y2_test", "params:kept_columns"],
+                outputs=None,
+                name="evaluate_tree_model_node",
             ),
         ]
     )

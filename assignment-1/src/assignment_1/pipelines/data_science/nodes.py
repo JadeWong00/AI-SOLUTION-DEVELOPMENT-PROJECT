@@ -1,5 +1,6 @@
 import logging
 import pandas as pd
+from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import max_error, mean_absolute_error, r2_score, accuracy_score, f1_score, confusion_matrix, make_scorer, fbeta_score
 from sklearn.model_selection import train_test_split, GridSearchCV, RandomizedSearchCV
 from sklearn.ensemble import RandomForestClassifier
@@ -306,17 +307,18 @@ def random_search_catboost(X_train, y_train):
                                     verbose=0,
                                     task_type="CPU",
                                     random_seed=42,
-                                    class_weights=[1, 8]
+                                    class_weights=[1, 7],
+                                    early_stopping_rounds=20
                                 )
 
     param_dist = {
         "iterations": np.arange(300, 1500, 50),
         "depth": np.arange(3, 10),
-        "learning_rate": np.linspace(0.01, 0.3, 10),
-        "l2_leaf_reg": np.linspace(1, 10, 10),
+        "learning_rate": np.linspace(0.01, 0.1, 1),
+        "l2_leaf_reg": np.linspace(4, 20, 10),
         "bagging_temperature": np.linspace(0, 1, 10),
         "random_strength": np.linspace(1, 20, 10),
-        "border_count": np.arange(32, 256, 32)
+        "border_count": np.arange(100, 256, 32)
     }
 
     f2 = make_scorer(fbeta_score, beta=2)
@@ -324,7 +326,7 @@ def random_search_catboost(X_train, y_train):
     search = RandomizedSearchCV(
         catboost,
         param_dist,
-        n_iter=80,
+        n_iter=100,
         scoring=f2,
         cv=5,
         verbose=1,
@@ -382,3 +384,87 @@ def evaluate_catboost_model(
     logger.info("CatBoost Confusion Matrix:\n%s", cm)
     
     return
+
+def random_search_decision_tree(X_train : pd.DataFrame, y_train : pd.Series):
+    
+    tree = DecisionTreeClassifier(random_state=42, class_weight='balanced')
+
+    param_dist = {
+        "criterion": ["gini", "entropy"],
+        "max_depth": randint(2, 50),
+        "min_samples_split": randint(2, 20),
+        "min_samples_leaf": randint(1, 20),
+        "max_features": [None, "sqrt", "log2"],
+        "class_weight": [None, "balanced"]
+    }
+
+    f2 = make_scorer(fbeta_score, beta=2)
+
+    random_search = RandomizedSearchCV(
+        estimator=tree,
+        param_distributions=param_dist,
+        n_iter=80,
+        scoring=f2,
+        cv=5,
+        verbose=1,
+        n_jobs=-1,
+    )
+
+    random_search.fit(X_train, y_train)
+
+    best_tree = random_search.best_estimator_
+    best_params = random_search.best_params_
+    
+
+    logger = logging.getLogger(__name__)
+    logger.info(f"Best Decision Tree Params: {best_params}")
+    
+    return best_tree
+
+
+def evaluate_tree_model(
+    tree: DecisionTreeClassifier, X_test: pd.DataFrame, y_test: pd.Series, columns: dict
+) -> dict[str, float]:
+    """Evaluate Tree classifier."""
+    y_pred = tree.predict(X_test)
+    
+    accuracy = accuracy_score(y_test, y_pred)
+    f1 = f1_score(y_test, y_pred)
+    cm = confusion_matrix(y_test, y_pred)
+    f2 = fbeta_score(y_test, y_pred, beta=2)
+
+    tree_struct = tree.tree_
+    used_feature_indices = tree_struct.feature[tree_struct.feature >= 0]
+    used_feature_indices = np.unique(used_feature_indices)
+
+    feature_array = np.array(columns["features"])
+
+    used_features = feature_array[used_feature_indices].tolist()
+    unused_features = list(set(columns["features"]) - set(used_features))
+    
+    logger = logging.getLogger(__name__)
+    
+    logger.info("Tree Model Accuracy: %.3f", accuracy)
+    logger.info("Tree Model F1 Score: %.3f", f1)
+    logger.info("Tree Model F2 Score: %.4f", f2)
+    logger.info("Tree Confusion Matrix:\n%s", cm)
+
+    logger.info(f"Used features: {used_features}")
+    logger.info(f"Unused features: {unused_features}")
+    
+    return
+
+def drop_cols_data (data: pd.DataFrame, parameters: dict) -> tuple:
+
+    # data.drop(columns=['Marital Status_unknown','Marital Status_married',"Marital Status_single"], inplace=True)
+    data.drop(columns=['Housing Loan_yes', 'Housing Loan_unknown'], inplace=True)
+    data.drop(columns=['Credit Default_unknown', "Credit Default_yes"], inplace=True)
+    data.drop(columns=['Personal Loan_unknown', 'Personal Loan_yes'], inplace=True)
+
+    X = data[parameters["features"]]
+    y = data["Subscription Status"]
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=parameters["test_size"], random_state=parameters["random_state"]
+    )
+
+    return X_train, X_test, y_train, y_test

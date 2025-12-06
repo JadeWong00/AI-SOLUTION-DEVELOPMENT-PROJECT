@@ -87,3 +87,34 @@ catboost_model_parameters:
   bagging_temperature: 0.4444444444444444
   random_seed: 42
   class_weights: [1, 8]
+
+
+kept_columns:
+  test_size: 0.2
+  random_state: 42
+  features:
+    - Age
+    - Campaign Calls
+    - Previous Contact Days
+    - Occupation_blue-collar
+    - Occupation_entrepreneur
+    - Occupation_housemaid
+    - Occupation_management
+    - Occupation_retired
+    - Occupation_self-employed
+    - Occupation_services
+    - Occupation_student
+    - Occupation_technician
+    - Occupation_unemployed
+    - Occupation_unknown
+    - Education Level_basic.6y
+    - Education Level_basic.9y
+    - Education Level_high.school
+    - Education Level_illiterate
+    - Education Level_professional.course
+    - Education Level_university.degree
+    - Marital Status_unknown
+    - Marital Status_married
+    - Marital Status_single
+    - Education Level_unknown
+    - Contact Method_telephone
