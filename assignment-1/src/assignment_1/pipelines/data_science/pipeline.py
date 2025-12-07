@@ -29,12 +29,6 @@ def create_pipeline(**kwargs) -> Pipeline:
                 name="train_model_node",
             ),
             Node(
-                func=train_knn_model,
-                inputs=["X_train", "y_train"],
-                outputs="knn_model",
-                name="train_knn_model_node",
-            ),
-            Node(
                 func=train_xgboost_model,
                 inputs=["X_train", "y_train", "params:xgboost_model_parameters"],
                 outputs="xgb_model",
@@ -53,12 +47,6 @@ def create_pipeline(**kwargs) -> Pipeline:
                 name="evaluate_model_node",
             ),
             Node(
-                func=evaluate_knn_model,
-                inputs=["knn_model", "X_test", "y_test"],
-                outputs=None,
-                name="evaluate_knn_model_node",
-            ),
-            Node(
                 func=evaluate_xgboost_model,
                 inputs=["xgb_model", "X_test", "y_test"],
                 outputs=None,
@@ -69,18 +57,6 @@ def create_pipeline(**kwargs) -> Pipeline:
                 inputs=["catboost_model", "X_test", "y_test"],
                 outputs=None,
                 name="evaluate_catboost_model_node",
-            ),
-            Node(
-                func=random_search_decision_tree,
-                inputs=["X2_train", "y2_train"],
-                outputs="decision_tree_model",
-                name="random_search_decision_tree_node",
-            ),
-            Node(
-                func=evaluate_tree_model,
-                inputs=["decision_tree_model","X2_test", "y2_test", "params:kept_columns"],
-                outputs=None,
-                name="evaluate_tree_model_node",
             ),
         ]
     )
