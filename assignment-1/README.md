@@ -1,100 +1,44 @@
-# Assignment_1
+# Overview of insights from EDA
+- The data seems to be not that correlated to the subscription status, the lack of a balanced dataset would lead to one side being more accurate than others. Overall, the data has too little positive response for subscription and will greatly affect the performance of all models that use this dataset
 
-[![Powered by Kedro](https://img.shields.io/badge/powered_by-kedro-ffc900?logo=kedro)](https://kedro.org)
+# Explanation of choice of models
 
-## Overview
+## Random Forest
+- Maintains original data structure
+- Reliable as a baseline model
 
-This is your new Kedro project, which was generated using `kedro 1.0.0`.
+## CatBoost
+- Can handle imbalanced datasets well
+- Can also adjust weights of the classes
 
-Take a look at the [Kedro documentation](https://docs.kedro.org) to get started.
+## XGBoost
+- Follows random forest, except each tree tries to fix its previous mistakes
+- Highly tunable
 
-## Rules and guidelines
+# How to run pipeline(s)
+- conda activate <kedro-environment>
+- cd to file location
+- kedro run
 
-In order to get the best out of the template:
+or
 
-* Don't remove any lines from the `.gitignore` file we provide
-* Make sure your results can be reproduced by following a [data engineering convention](https://docs.kedro.org/en/stable/faq/faq.html#what-is-data-engineering-convention)
-* Don't commit data to your repository
-* Don't commit any credentials or your local configuration to your repository. Keep all your credentials and local configuration in `conf/local/`
+- cd to where run.sh is
+- bash run.sh
 
-## How to install dependencies
 
-Declare any dependencies in `requirements.txt` for `pip` installation.
+# Contributions
 
-To install them, run:
+## Ng Yik Heng ()
+- EDA for Marital Status, Personal Loan, Campaign Calls
+- Pipeline structure
+- Nodes
 
-```
-pip install -r requirements.txt
-```
+## Matthew Christopher Tan Ming Wen (230649F)
+- EDA for Occupation, Housing Loan, Previous Contact Days
+- EDA & Github structure
+- Logistic Regression
 
-## How to run your Kedro pipeline
-
-You can run your Kedro project with:
-
-```
-kedro run
-```
-
-## How to test your Kedro project
-
-Have a look at the files `tests/test_run.py` and `tests/pipelines/data_science/test_pipeline.py` for instructions on how to write your tests. Run the tests as follows:
-
-```
-pytest
-```
-
-You can configure the coverage threshold in your project's `pyproject.toml` file under the `[tool.coverage.report]` section.
-
-## Project dependencies
-
-To see and update the dependency requirements for your project use `requirements.txt`. You can install the project requirements with `pip install -r requirements.txt`.
-
-[Further information about project dependencies](https://docs.kedro.org/en/stable/kedro_project_setup/dependencies.html#project-specific-dependencies)
-
-## How to work with Kedro and notebooks
-
-> Note: Using `kedro jupyter` or `kedro ipython` to run your notebook provides these variables in scope: `catalog`, `context`, `pipelines` and `session`.
->
-> Jupyter, JupyterLab, and IPython are already included in the project requirements by default, so once you have run `pip install -r requirements.txt` you will not need to take any extra steps before you use them.
-
-### Jupyter
-To use Jupyter notebooks in your Kedro project, you need to install Jupyter:
-
-```
-pip install jupyter
-```
-
-After installing Jupyter, you can start a local notebook server:
-
-```
-kedro jupyter notebook
-```
-
-### JupyterLab
-To use JupyterLab, you need to install it:
-
-```
-pip install jupyterlab
-```
-
-You can also start JupyterLab:
-
-```
-kedro jupyter lab
-```
-
-### IPython
-And if you want to run an IPython session:
-
-```
-kedro ipython
-```
-
-### How to ignore notebook output cells in `git`
-To automatically strip out all output cell contents before committing to `git`, you can use tools like [`nbstripout`](https://github.com/kynan/nbstripout). For example, you can add a hook in `.git/config` with `nbstripout --install`. This will run `nbstripout` before anything is committed to `git`.
-
-> *Note:* Your output cells will be retained locally.
-
-## Package your Kedro project
-
-[Further information about building project documentation and packaging your project](https://docs.kedro.org/en/stable/tutorial/package_a_project.html)
+## Wong Qun Xiu ()
+- EDA for Age, Credit Default, Contact Method
+- Pipeline structure
+- XGBoost
