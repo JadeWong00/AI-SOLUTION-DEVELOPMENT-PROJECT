@@ -1,7 +1,7 @@
 import logging
 import pandas as pd
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.metrics import max_error, mean_absolute_error, r2_score, accuracy_score, f1_score, confusion_matrix, make_scorer, fbeta_score
+from sklearn.metrics import accuracy_score, f1_score, confusion_matrix, make_scorer, fbeta_score
 from sklearn.model_selection import train_test_split, GridSearchCV, RandomizedSearchCV
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier
@@ -31,7 +31,7 @@ def split_data(data: pd.DataFrame, parameters: dict) -> tuple:
     return X_train, X_test, y_train, y_test
 
 def grid_search_random_forest(X_train: pd.DataFrame, y_train: pd.Series) -> RandomForestClassifier:
-    """Performs grid search to find the best hyperparameters for Random Forest classifier."""
+
     clf = RandomForestClassifier(random_state=42, n_jobs=-1, class_weight='balanced')
 
     param_grid = {
@@ -41,8 +41,10 @@ def grid_search_random_forest(X_train: pd.DataFrame, y_train: pd.Series) -> Rand
         'min_samples_split': [5, 7, 10],
         'min_samples_leaf': [1, 2, 4]
         }
+    
+    f2 = make_scorer(fbeta_score, beta=2)
 
-    grid_search = GridSearchCV(estimator=clf, param_grid=param_grid, cv=5, n_jobs=-1, scoring='f1', verbose=2)
+    grid_search = GridSearchCV(estimator=clf, param_grid=param_grid, cv=5, n_jobs=-1, scoring=f2, verbose=2)
     grid_search.fit(X_train, y_train)
     best_clf = grid_search.best_estimator_
     logger = logging.getLogger(__name__)
@@ -100,7 +102,7 @@ def train_random_forest_model(X_train: pd.DataFrame, y_train: pd.Series, paramet
     return clf
 
 def grid_search_knn(X_train: pd.DataFrame, y_train: pd.Series) -> KNeighborsClassifier:
-    """Performs grid search to find the best hyperparameters for KNN classifier."""
+
     knn = KNeighborsClassifier(n_jobs=-1)
 
     param_grid = {
@@ -147,7 +149,7 @@ def train_knn_model(X_train: pd.DataFrame, y_train: pd.Series) -> KNeighborsClas
 def evaluate_knn_model(
     knn: KNeighborsClassifier, X_test: pd.DataFrame, y_test: pd.Series
 ) -> dict[str, float]:
-    """Evaluate KNN classifier."""
+
     y_pred = knn.predict(X_test)
     
     accuracy = accuracy_score(y_test, y_pred)
@@ -167,7 +169,7 @@ def evaluate_knn_model(
 def evaluate_random_forest_model(
     clf: RandomForestClassifier, X_test: pd.DataFrame, y_test: pd.Series
 ) -> dict[str, float]:
-    """Evaluate Random Forest classifier."""
+
     y_pred = clf.predict(X_test)
     
     accuracy = accuracy_score(y_test, y_pred)
@@ -260,7 +262,7 @@ def random_search_xgboost(X_train, y_train):
     return search.best_estimator_
 
 def train_xgboost_model(X_train: pd.DataFrame, y_train: pd.Series, parameters: dict) -> XGBClassifier:
-    """Train XGBoost classifier."""
+
     xgb = XGBClassifier(
         n_estimators=parameters["n_estimators"],
         max_depth=parameters["max_depth"],
@@ -281,7 +283,7 @@ def train_xgboost_model(X_train: pd.DataFrame, y_train: pd.Series, parameters: d
 def evaluate_xgboost_model(
     xgb: XGBClassifier, X_test: pd.DataFrame, y_test: pd.Series
 ) -> dict[str, float]:
-    """Evaluate XGBoost classifier."""
+
     y_pred = xgb.predict(X_test)
     
     accuracy = accuracy_score(y_test, y_pred)
@@ -345,7 +347,7 @@ def random_search_catboost(X_train, y_train):
     return search.best_estimator_
 
 def train_catboost_model(X_train: pd.DataFrame, y_train: pd.Series, parameters: dict) -> CatBoostClassifier:
-    """Train CatBoost classifier."""
+
     catboost = CatBoostClassifier(
         iterations=parameters["iterations"],
         depth=parameters["depth"],
@@ -367,7 +369,7 @@ def train_catboost_model(X_train: pd.DataFrame, y_train: pd.Series, parameters: 
 def evaluate_catboost_model(
     catboost: CatBoostClassifier, X_test: pd.DataFrame, y_test: pd.Series
 ) -> dict[str, float]:
-    """Evaluate CatBoost classifier."""
+
     y_pred = catboost.predict(X_test)
     
     accuracy = accuracy_score(y_test, y_pred)
@@ -425,7 +427,7 @@ def random_search_decision_tree(X_train : pd.DataFrame, y_train : pd.Series):
 def evaluate_tree_model(
     tree: DecisionTreeClassifier, X_test: pd.DataFrame, y_test: pd.Series, columns: dict
 ) -> dict[str, float]:
-    """Evaluate Tree classifier."""
+
     y_pred = tree.predict(X_test)
     
     accuracy = accuracy_score(y_test, y_pred)
