@@ -1,7 +1,6 @@
 import logging
 import pandas as pd
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.metrics import accuracy_score, f1_score, confusion_matrix, make_scorer, fbeta_score
+from sklearn.metrics import max_error, mean_absolute_error, r2_score, accuracy_score, f1_score, confusion_matrix, make_scorer, fbeta_score
 from sklearn.model_selection import train_test_split, GridSearchCV, RandomizedSearchCV
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier
@@ -23,24 +22,17 @@ def split_data(data: pd.DataFrame, parameters: dict) -> tuple:
         Split data.
     """
 
-    # data inside parameters go in here
     X = data[parameters["features"]]
-
-    # What are you trying to predict
     y = data["Subscription Status"]
-
-    # Splitting the data
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=parameters["test_size"], random_state=parameters["random_state"]
     )
     return X_train, X_test, y_train, y_test
 
 def grid_search_random_forest(X_train: pd.DataFrame, y_train: pd.Series) -> RandomForestClassifier:
+    """Performs grid search to find the best hyperparameters for Random Forest classifier."""
+    clf = RandomForestClassifier(random_state=42, n_jobs=-1, class_weight='balanced')
 
-    # placing the randomforest classifer into rf
-    rf = RandomForestClassifier(random_state=42, n_jobs=-1, class_weight='balanced')
-
-    # Range of parameters
     param_grid = {
         'n_estimators': [700, 750, 800],
         'max_depth': [8, 10, 12],
@@ -48,30 +40,17 @@ def grid_search_random_forest(X_train: pd.DataFrame, y_train: pd.Series) -> Rand
         'min_samples_split': [5, 7, 10],
         'min_samples_leaf': [1, 2, 4]
         }
-    
-    # F2 score
-    f2 = make_scorer(fbeta_score, beta=2)
 
-    #grid search parameters
-    grid_search = GridSearchCV(estimator=rf, param_grid=param_grid, cv=5, n_jobs=-1, scoring=f2, verbose=2)
-
-    # grid search training begins
+    grid_search = GridSearchCV(estimator=clf, param_grid=param_grid, cv=5, n_jobs=-1, scoring='f1', verbose=2)
     grid_search.fit(X_train, y_train)
-
-    # take best model
     best_clf = grid_search.best_estimator_
     logger = logging.getLogger(__name__)
-
-    # show best parameter combination
     logger.info("Best parameters found: %s", grid_search.best_params_)
     return best_clf
 
 def random_search_random_forest(X_train, y_train):
-
-    # place random forest classifer into rf
     rf = RandomForestClassifier(random_state=42, class_weight='balanced')
 
-    # range of parameters to work with
     param_dist = {
         "n_estimators": randint(300, 1500),
         "max_depth": [None] + list(range(5, 50)),
@@ -81,10 +60,8 @@ def random_search_random_forest(X_train, y_train):
         "bootstrap": [True, False]
     }
 
-    # f2 score calculation
     f2_score = make_scorer(fbeta_score, beta=2)
 
-    # random search parameters
     search = RandomizedSearchCV(
         estimator=rf,
         param_distributions=param_dist,
@@ -96,7 +73,6 @@ def random_search_random_forest(X_train, y_train):
         random_state=42
     )
 
-    # Training
     search.fit(X_train, y_train)
 
     logger = logging.getLogger(__name__)
@@ -110,7 +86,6 @@ def random_search_random_forest(X_train, y_train):
 
 def train_random_forest_model(X_train: pd.DataFrame, y_train: pd.Series, parameters: dict) -> RandomForestClassifier:
     
-    # Parameters for model, skips having to run through 100 models every time 
     clf = RandomForestClassifier(n_estimators=parameters["n_estimators"], 
                                  random_state=parameters["random_state"],
                                  max_depth=parameters["max_depth"],
@@ -120,26 +95,19 @@ def train_random_forest_model(X_train: pd.DataFrame, y_train: pd.Series, paramet
                                  min_samples_split=parameters["min_samples_split"],
                                  min_samples_leaf=parameters["min_samples_leaf"]
                                  )
-    
-    # Train model 
     clf.fit(X_train, y_train)
-
-    # Return Model
     return clf
 
 def grid_search_knn(X_train: pd.DataFrame, y_train: pd.Series) -> KNeighborsClassifier:
-
-    # Tried KNN here, won't reccommend, data too complex
+    """Performs grid search to find the best hyperparameters for KNN classifier."""
     knn = KNeighborsClassifier(n_jobs=-1)
 
-    # If you are still reading, parameters for knn grid search
     param_grid = {
     'n_neighbors': list(range(65, 69, 1)),
     'weights': ['uniform', 'distance'],
     'metric': ['euclidean', 'manhattan']
     }
 
-    # Parameters for grid search
     grid = GridSearchCV(
     KNeighborsClassifier(),
     param_grid,
@@ -149,27 +117,20 @@ def grid_search_knn(X_train: pd.DataFrame, y_train: pd.Series) -> KNeighborsClas
     verbose=2
     )
 
-    # Training Models
     grid.fit(X_train, y_train)
-
-    # Find best one
     best_knn = grid.best_estimator_
-
     logger = logging.getLogger(__name__)
-    #Find best parameters and print
     logger.info("Best KNN parameters found: %s", grid.best_params_)
     return best_knn
 
 def train_knn_model(X_train: pd.DataFrame, y_train: pd.Series) -> KNeighborsClassifier:
     
-    # To accomadate Knn, hoped for better result
     pipe = Pipeline([
         ("scaler", StandardScaler()),
         ("pca", PCA()),
         ("knn", KNeighborsClassifier())
     ])
 
-    # parameters for knn model
     param = {
         "pca__n_components": 24,
         "knn__n_neighbors": 32,
@@ -177,7 +138,6 @@ def train_knn_model(X_train: pd.DataFrame, y_train: pd.Series) -> KNeighborsClas
         "knn__p": 2,
     }
 
-    # Different pipeline, this one is meant for running inside the node
     knn = pipe.set_params(**param)
     knn.fit(X_train, y_train)
 
@@ -186,17 +146,15 @@ def train_knn_model(X_train: pd.DataFrame, y_train: pd.Series) -> KNeighborsClas
 def evaluate_knn_model(
     knn: KNeighborsClassifier, X_test: pd.DataFrame, y_test: pd.Series
 ) -> dict[str, float]:
-
-    # Predicting against test result
+    """Evaluate KNN classifier."""
     y_pred = knn.predict(X_test)
     
-    # Collecting f1, f2, accuracy and confusion matrix
     accuracy = accuracy_score(y_test, y_pred)
     f1 = f1_score(y_test, y_pred)
     cm = confusion_matrix(y_test, y_pred)
     f2 = fbeta_score(y_test, y_pred, beta=2)
     
-    # print out f1, f2, confusion matrix, accuracy
+    
     logger = logging.getLogger(__name__)
     logger.info("KNN Model F2 Score: %.4f", f2)
     logger.info("KNN Model Accuracy: %.3f", accuracy)
@@ -208,17 +166,14 @@ def evaluate_knn_model(
 def evaluate_random_forest_model(
     clf: RandomForestClassifier, X_test: pd.DataFrame, y_test: pd.Series
 ) -> dict[str, float]:
-
-    # Predicting against test result
+    """Evaluate Random Forest classifier."""
     y_pred = clf.predict(X_test)
     
-    # Collecting f1, f2, accuracy and confusion matrix
     accuracy = accuracy_score(y_test, y_pred)
     f1 = f1_score(y_test, y_pred)
     cm = confusion_matrix(y_test, y_pred)
     f2 = fbeta_score(y_test, y_pred, beta=2)
     
-    # print out f1, f2, confusion matrix, accuracy
     logger = logging.getLogger(__name__)
     logger.info("Forest Model Accuracy: %.3f", accuracy)
     logger.info("Forest Model F1 Score: %.3f", f1)
@@ -229,14 +184,12 @@ def evaluate_random_forest_model(
 
 def random_search_knn(X_train, y_train):
 
-    # Internal Pipeline Setup
     pipe = Pipeline([
         ("scaler", StandardScaler()),
         ("pca", PCA()),
         ("knn", KNeighborsClassifier())
     ])
 
-    # parameters range
     param_dist = {
         "pca__n_components": randint(5, 40),
         "knn__n_neighbors": randint(5, 150),
@@ -244,10 +197,8 @@ def random_search_knn(X_train, y_train):
         "knn__p": [1, 2],
     }
 
-    #f2 score
     f2 = make_scorer(fbeta_score, beta=2)
 
-    # parameters for rnadom search cv
     search = RandomizedSearchCV(
         pipe,
         param_dist,
@@ -261,23 +212,18 @@ def random_search_knn(X_train, y_train):
 
     logger = logging.getLogger(__name__)
 
-    # Training
     search.fit(X_train, y_train)
 
-    # print best score and parameters
     logger.info(f"Best KNN Params: {search.best_params_}")
     logger.info(f"Best CV F2 Score: {search.best_score_}")
 
-    # return model
     return search.best_estimator_
 
 
 def random_search_xgboost(X_train, y_train):
 
-    # xgboost classifer
     xgb = XGBClassifier(use_label_encoder=False, eval_metric='logloss', scale_pos_weight=8 , random_state=42)
 
-    # parameters range
     param_dist = {
         "n_estimators": randint(300, 1500),
         "max_depth": randint(3, 15),
@@ -289,10 +235,8 @@ def random_search_xgboost(X_train, y_train):
         "reg_lambda": [1, 1.5, 2]
     }
 
-    #f2 score
     f2 = make_scorer(fbeta_score, beta=2)
 
-    # Random Search CV parameters
     search = RandomizedSearchCV(
         xgb,
         param_dist,
@@ -304,7 +248,6 @@ def random_search_xgboost(X_train, y_train):
         random_state=42
     )
 
-    # Training models
     search.fit(X_train, y_train)
 
     logger = logging.getLogger(__name__)
@@ -316,8 +259,7 @@ def random_search_xgboost(X_train, y_train):
     return search.best_estimator_
 
 def train_xgboost_model(X_train: pd.DataFrame, y_train: pd.Series, parameters: dict) -> XGBClassifier:
-
-    # XGBoost final parameters
+    """Train XGBoost classifier."""
     xgb = XGBClassifier(
         n_estimators=parameters["n_estimators"],
         max_depth=parameters["max_depth"],
@@ -332,18 +274,15 @@ def train_xgboost_model(X_train: pd.DataFrame, y_train: pd.Series, parameters: d
         scale_pos_weight=parameters["scale_pos_weight"],
         random_state=parameters["random_state"]
     )
-    # Train model
     xgb.fit(X_train, y_train)
     return xgb
 
 def evaluate_xgboost_model(
     xgb: XGBClassifier, X_test: pd.DataFrame, y_test: pd.Series
 ) -> dict[str, float]:
-
-    # Testing test data against model
+    """Evaluate XGBoost classifier."""
     y_pred = xgb.predict(X_test)
     
-    # Collecting f1, f2, confusion matrix, accuracy
     accuracy = accuracy_score(y_test, y_pred)
     f1 = f1_score(y_test, y_pred)
     cm = confusion_matrix(y_test, y_pred)
@@ -352,7 +291,6 @@ def evaluate_xgboost_model(
     
     logger = logging.getLogger(__name__)
     
-    # print out f1, f2, confusion matrix, accuracy
     logger.info("XGBoost Model Accuracy: %.3f", accuracy)
     logger.info("XGBoost Model F1 Score: %.3f", f1)
     logger.info("XGBoost Model F2 Score: %.4f", f2)
@@ -362,36 +300,31 @@ def evaluate_xgboost_model(
 
 def random_search_catboost(X_train, y_train):
 
-    # Catboost Classifer
     catboost = CatBoostClassifier(
                                     loss_function="Logloss",
-                                    verbose=0,
                                     eval_metric="F1",
+                                    verbose=0,
                                     task_type="CPU",
                                     random_seed=42,
-                                    class_weights=[1, 7],
-                                    early_stopping_rounds=20
+                                    class_weights=[1, 8]
                                 )
 
-    # Training Parameters
     param_dist = {
         "iterations": np.arange(300, 1500, 50),
         "depth": np.arange(3, 10),
-        "learning_rate": np.linspace(0.01, 0.1, 1),
-        "l2_leaf_reg": np.linspace(4, 20, 10),
+        "learning_rate": np.linspace(0.01, 0.3, 10),
+        "l2_leaf_reg": np.linspace(1, 10, 10),
         "bagging_temperature": np.linspace(0, 1, 10),
         "random_strength": np.linspace(1, 20, 10),
-        "border_count": np.arange(100, 256, 32)
+        "border_count": np.arange(32, 256, 32)
     }
 
-    # f2 score
     f2 = make_scorer(fbeta_score, beta=2)
 
-    # Random Search Parameters
     search = RandomizedSearchCV(
         catboost,
         param_dist,
-        n_iter=100,
+        n_iter=80,
         scoring=f2,
         cv=5,
         verbose=1,
@@ -410,8 +343,7 @@ def random_search_catboost(X_train, y_train):
     return search.best_estimator_
 
 def train_catboost_model(X_train: pd.DataFrame, y_train: pd.Series, parameters: dict) -> CatBoostClassifier:
-
-    # Cat boost final parameters
+    """Train CatBoost classifier."""
     catboost = CatBoostClassifier(
         iterations=parameters["iterations"],
         depth=parameters["depth"],
@@ -427,18 +359,15 @@ def train_catboost_model(X_train: pd.DataFrame, y_train: pd.Series, parameters: 
         random_seed=parameters["random_seed"],
         class_weights=parameters["class_weights"]
     )
-    #Train model
     catboost.fit(X_train, y_train)
     return catboost
 
 def evaluate_catboost_model(
     catboost: CatBoostClassifier, X_test: pd.DataFrame, y_test: pd.Series
 ) -> dict[str, float]:
-
-    # Testing model against test data
+    """Evaluate CatBoost classifier."""
     y_pred = catboost.predict(X_test)
     
-    # Colleccting f1, f2, confusion matrix and accuracy
     accuracy = accuracy_score(y_test, y_pred)
     f1 = f1_score(y_test, y_pred)
     cm = confusion_matrix(y_test, y_pred)
@@ -447,104 +376,9 @@ def evaluate_catboost_model(
     
     logger = logging.getLogger(__name__)
     
-    # printing out f1, f2, confusion matrix and accuracy
     logger.info("CatBoost Model Accuracy: %.3f", accuracy)
     logger.info("CatBoost Model F1 Score: %.3f", f1)
     logger.info("CatBoost Model F2 Score: %.4f", f2)
     logger.info("CatBoost Confusion Matrix:\n%s", cm)
     
     return
-
-def random_search_decision_tree(X_train : pd.DataFrame, y_train : pd.Series):
-
-    # Decision Tree   
-    tree = DecisionTreeClassifier(random_state=42, class_weight='balanced')
-
-    # range of parameters for training
-    param_dist = {
-        "criterion": ["gini", "entropy"],
-        "max_depth": randint(2, 50),
-        "min_samples_split": randint(2, 20),
-        "min_samples_leaf": randint(1, 20),
-        "max_features": [None, "sqrt", "log2"],
-        "class_weight": [None, "balanced"]
-    }
-
-    # F2 score
-    f2 = make_scorer(fbeta_score, beta=2)
-
-    # Random Search CV parameters
-    random_search = RandomizedSearchCV(
-        estimator=tree,
-        param_distributions=param_dist,
-        n_iter=80,
-        scoring=f2,
-        cv=5,
-        verbose=1,
-        n_jobs=-1,
-    )
-
-    # Training
-    random_search.fit(X_train, y_train)
-
-    # Taking best_tree and best parameters
-    best_tree = random_search.best_estimator_
-    best_params = random_search.best_params_
-    
-    logger = logging.getLogger(__name__)
-    # print best parameters
-    logger.info(f"Best Decision Tree Params: {best_params}")
-    
-    return best_tree
-
-
-def evaluate_tree_model(
-    tree: DecisionTreeClassifier, X_test: pd.DataFrame, y_test: pd.Series, columns: dict
-) -> dict[str, float]:
-
-    # Testing against the model
-    y_pred = tree.predict(X_test)
-    
-    # Colecting f2, f1, accuracy and confusion matrix
-    accuracy = accuracy_score(y_test, y_pred)
-    f1 = f1_score(y_test, y_pred)
-    cm = confusion_matrix(y_test, y_pred)
-    f2 = fbeta_score(y_test, y_pred, beta=2)
-
-    # Find used features inside decision tree
-    tree_struct = tree.tree_
-    used_feature_indices = tree_struct.feature[tree_struct.feature >= 0]
-    used_feature_indices = np.unique(used_feature_indices)
-
-    feature_array = np.array(columns["features"])
-
-    used_features = feature_array[used_feature_indices].tolist()
-    unused_features = list(set(columns["features"]) - set(used_features))
-    
-    logger = logging.getLogger(__name__)
-    
-    # printing out f1, f2, confusion matrix and accuracy
-    logger.info("Tree Model Accuracy: %.3f", accuracy)
-    logger.info("Tree Model F1 Score: %.3f", f1)
-    logger.info("Tree Model F2 Score: %.4f", f2)
-    logger.info("Tree Confusion Matrix:\n%s", cm)
-
-    # Features that could maybe dropped during features selection
-    logger.info(f"Used features: {used_features}")
-    logger.info(f"Unused features: {unused_features}")
-    
-    return
-
-def drop_cols_data (data: pd.DataFrame, parameters: dict) -> tuple:
-
-    # Dropping columns in test data by only taking used features
-
-    X = data[parameters["features"]]
-    y = data["Subscription Status"]
-
-    # Spliting the data
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=parameters["test_size"], random_state=parameters["random_state"]
-    )
-
-    return X_train, X_test, y_train, y_test
